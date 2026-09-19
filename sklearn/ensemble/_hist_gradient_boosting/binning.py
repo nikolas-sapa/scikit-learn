@@ -75,6 +75,14 @@ def _find_binning_thresholds(col_data, max_bins, sample_weight=None):
         col_data = col_data[sort_idx]
         sample_weight = sample_weight[sort_idx]
 
+    # A feature can have no usable values at all, e.g. when every value is
+    # missing (or, when sample weights are given, when every value carries zero
+    # weight). There are then no distinct non-missing values to derive bin
+    # thresholds from, so the feature simply cannot be split: return no
+    # thresholds, as is done for a constant feature below.
+    if len(col_data) == 0:
+        return np.asarray([])
+
     # fast way for n_distinct = len(np.unique(col_data))
     distinct_mask = np.empty(len(col_data), dtype=bool)
     distinct_mask[0] = True

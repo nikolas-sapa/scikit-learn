@@ -38,6 +38,7 @@ from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler, OneHotEncoder
 from sklearn.utils import check_random_state, shuffle
+from sklearn.utils._param_validation import InvalidParameterError
 from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
 from sklearn.utils._testing import _convert_container
 from sklearn.utils.fixes import _IS_32BIT
@@ -1762,3 +1763,37 @@ def test_pandas_nullable_dtype():
 
     clf = HistGradientBoostingClassifier()
     clf.fit(X, y)
+
+
+def test_all_nan_feature_no_crash():
+    # Non-regression test: a feature whose values are entirely missing must
+    # not raise an obscure IndexError deep in the binning code. HGBT is
+    # supposed to accept NaN, so such a column should simply be uninformative.
+    # See https://github.com/scikit-learn/scikit-learn/issues/19008
+    X = np.array(
+        [[np.nan, 1.0], [np.nan, 2.0], [np.nan, 3.0], [np.nan, 4.0]] * 5
+    )
+    y = np.array([0, 1, 0, 1] * 5)
+    clf = HistGradientBoostingClassifier(max_iter=5, random_state=0)
+    # Should not raise.
+    clf.fit(X, y)
+    assert clf.predict(X[:2]).shape == (2,)
+
+
+@pytest.mark.parametrize("position", ["first", "last"])
+def test_all_nan_feature_does_not_degrade_useful_column(position):
+    # An entirely-missing column must be ignored without affecting the model
+    # fit on the remaining (valid) column.
+    rng = np.random.RandomState(0)
+    x = rng.randn(200)
+    y = (x > 0).astype(int)
+    y = y ^ (rng.rand(200) < 0.05)
+    nan_col = np.full(200, np.nan)
+    if position == "first":
+        X = np.column_stack([nan_col, x])
+    else:
+        X = np.column_stack([x, nan_col])
+    score = cross_val_score(
+        HistGradientBoostingClassifier(random_state=0), X, y, cv=3
+    ).mean()
+    assert score > 0.85
