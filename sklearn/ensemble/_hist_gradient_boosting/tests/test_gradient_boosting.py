@@ -1795,9 +1795,7 @@ def test_min_cat_support_changes_categorical_split():
     X = cat.reshape(-1, 1).astype(np.float64)
     y = np.isin(cat, [0, 2]).astype(np.float64)
 
-    common = dict(
-        categorical_features=[0], max_iter=1, max_depth=1, random_state=0
-    )
+    common = dict(categorical_features=[0], max_iter=1, max_depth=1, random_state=0)
     low = HistGradientBoostingClassifier(min_cat_support=1.0, **common).fit(X, y)
     high = HistGradientBoostingClassifier(min_cat_support=1000.0, **common).fit(X, y)
 
@@ -1814,8 +1812,12 @@ def test_min_cat_support_default_matches_hardcoded():
     # The default (10.0) must reproduce the historical hard-coded MIN_CAT_SUPPORT
     # behavior exactly, so existing models are unchanged.
     X, y = make_classification(
-        n_samples=300, n_features=4, n_informative=3, n_redundant=0,
-        n_repeated=0, random_state=0
+        n_samples=300,
+        n_features=4,
+        n_informative=3,
+        n_redundant=0,
+        n_repeated=0,
+        random_state=0,
     )
     X = (X * 5).astype(int).astype(float)  # low-cardinality integer categories
     cat_features = [0, 1, 2, 3]
@@ -1837,8 +1839,10 @@ def test_min_cat_support_larger_than_all_categories():
     X = np.column_stack([cat, rng.randn(1000)]).astype(np.float64)
     y = (cat == 2).astype(np.int64)
     clf = HistGradientBoostingClassifier(
-        categorical_features=[0], min_cat_support=10_000.0,
-        max_iter=10, random_state=0,
+        categorical_features=[0],
+        min_cat_support=10_000.0,
+        max_iter=10,
+        random_state=0,
     )
     # Should not raise even though every category is below the support threshold.
     clf.fit(X, y)
